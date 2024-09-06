@@ -29,6 +29,51 @@ stages:
       packages:
       - broadcom-sta-dkms
 
+  - name: install-nvidia
+    type: apt
+    source:
+      packages:
+      - nvidia-legacy-340xx-driver
+      - nvidia-vaapi-driver
+      - nvidia-legacy-340xx-alternative
+      - nvidia-legacy-340xx-smi
+      - firmware-misc-nonfree
+
+  - name: nvidia-sysd-units
+    type: shell
+    commands:
+    - mkdir -p /etc/systemd/system/systemd-suspend.service.wants
+    - mkdir -p /etc/systemd/system/systemd-hibernate.service.wants
+    - ln -s /usr/lib/systemd/system/nvidia-suspend.service /etc/systemd/system/systemd-suspend.service.wants/nvidia-suspend.service || true
+    - ln -s /usr/lib/systemd/system/nvidia-hibernate.service /etc/systemd/system/systemd-hibernate.service.wants/nvidia-hibernate.service || true
+    - ln -s /usr/lib/systemd/system/nvidia-resume.service /etc/systemd/system/systemd-hibernate.service.wants/nvidia-resume.service || true
+
+  - name: extra-utilities
+    type: apt
+    source:
+      packages:
+      - switcheroo-control
+
+  - name: vanilla-tools
+    type: shell
+    source:
+      type: tar
+      url: https://github.com/Vanilla-OS/vanilla-tools/releases/download/v1.0.0/vanilla-tools.tar.gz
+      checksum: 0e1d92d9c9154f9a115e97b40ff692afa52ddd0d9f770a8ec67440bf1a48aa72
+    commands:
+    - mkdir -p /usr/bin
+    - cp /sources/vanilla-tools/vanilla-tools/nrun /usr/bin/nrun
+    - cp /sources/vanilla-tools/vanilla-tools/prime-switch /usr/bin/prime-switch
+    - chmod +x /usr/bin/nrun
+    - chmod +x /usr/bin/prime-switch
+
+  - name: enable-wayland
+    type: shell
+    commands:
+    - mkdir -p /etc/udev/rules.d
+    - ln -s /dev/null /etc/udev/rules.d/61-gdm.rules
+
+
   # Put your custom actions before this comment
 
   - name: set-image-name-abroot
@@ -39,8 +84,10 @@ stages:
   - name: cleanup
     type: shell
     commands:
-    - apt-get autoremove -y
-    - apt-get clean
+    - apt autoremove -y
+    - apt clean
+    - apt remove -y zutty gnome-shell-extension-prefs
+    - SUDO_FORCE_REMOVE=yes apt purge -y sudo
     - lpkg --lock
 
   - name: fsguard
